@@ -4,10 +4,12 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"github.com/hekmon/transmissionrpc"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -34,6 +36,20 @@ type Config struct {
 	User   string
 	Pass   string
 	ApiKey string
+	Proxy  string
+}
+
+func (c Config) validate() bool {
+	if c.Host == "" {
+		return false
+	}
+	if c.Port == 0 {
+		return false
+	}
+	if c.ApiKey == "" {
+		return false
+	}
+	return true
 }
 
 type U2Request struct {
@@ -55,12 +71,20 @@ type U2Response struct {
 }
 
 func initClient() {
+	commandConfig := parseFlag()
+	if commandConfig != nil {
+		apiKey = commandConfig.ApiKey
+		makeClient(commandConfig.Host, commandConfig.Port, commandConfig.User, commandConfig.Pass)
+		checkVersion()
+		return
+	}
+
 	reader := bufio.NewReader(os.Stdin)
 
 	config := readConfig()
 	if config != nil {
 		fmt.Println("Finding config:")
-		fmt.Printf("Host: %s\nPort: %d\nUser: %s\nPassword %s\nAPI Key: %s\n", config.Host, config.Port, config.User, config.Pass, config.ApiKey)
+		fmt.Printf("Host: %s\nPort: %d\nUser: %s\nPassword %s\nAPI Key: %s\nHTTP Proxy: %s\n", config.Host, config.Port, config.User, config.Pass, config.ApiKey, config.Proxy)
 
 		fmt.Print("Use this config?(y/n)")
 		useConfig, _ := reader.ReadString('\n')
@@ -68,6 +92,7 @@ func initClient() {
 
 		if strings.ToLower(useConfig) == "y" || strings.ToLower(useConfig) == "yes" {
 			apiKey = config.ApiKey
+			setHttpProxy(config.Proxy)
 			makeClient(config.Host, config.Port, config.User, config.Pass)
 			checkVersion()
 			return
@@ -100,10 +125,41 @@ func initClient() {
 	key, _ := reader.ReadString('\n')
 	apiKey = strings.TrimSpace(key)
 
+	fmt.Print("HTTP Proxy: ")
+	proxy, _ := reader.ReadString('\n')
+	proxy = strings.TrimSpace(proxy)
+
+	setHttpProxy(proxy)
 	makeClient(host, uint16(port), user, pass)
 
 	checkVersion()
-	saveConfig(host, uint16(port), user, pass, apiKey)
+	saveConfig(host, uint16(port), user, pass, apiKey, proxy)
+}
+
+func parseFlag() *Config {
+	host := flag.String("h", "", "Transmission host")
+	port := flag.Uint64("p", 0, "Transmission port")
+	user := flag.String("u", "", "RPC User")
+	pass := flag.String("P", "", "RPC Pass")
+	key := flag.String("k", "", "U2 API Key")
+	proxy := flag.String("proxy", "", "Http proxy address, i.e.: http://127.0.0.1:123")
+
+	flag.Parse()
+
+	setHttpProxy(*proxy)
+
+	config := Config{
+		Host:   *host,
+		Port:   uint16(*port),
+		User:   *user,
+		Pass:   *pass,
+		ApiKey: *key,
+	}
+
+	if config.validate() {
+		return &config
+	}
+	return nil
 }
 
 func makeClient(host string, port uint16, user string, pass string) {
@@ -143,16 +199,21 @@ func readConfig() *Config {
 		fmt.Println("Error while decoding saved config!")
 		return nil
 	}
-	return &config
+	if config.validate() {
+
+		return &config
+	}
+	return nil
 }
 
-func saveConfig(host string, port uint16, user, pass, apiKey string) {
+func saveConfig(host string, port uint16, user, pass, apiKey, proxy string) {
 	config := Config{
 		Host:   host,
 		Port:   port,
 		User:   user,
 		Pass:   pass,
 		ApiKey: apiKey,
+		Proxy:  proxy,
 	}
 	configBytes, err := json.Marshal(config)
 	if err != nil {
@@ -341,12 +402,6 @@ func updateTorrent(torrent *transmissionrpc.Torrent, secretKey string) bool {
 	}
 }
 
-func closeBody(resp *http.Response) {
-	if resp.Body != nil {
-		resp.Body.Close()
-	}
-}
-
 func readRecords() map[string]int {
 	records := make(map[string]int)
 	recordBytes, err := ioutil.ReadFile(processRecordFileName)
@@ -374,6 +429,25 @@ func saveRecords(records map[string]int) {
 	if err != nil {
 		fmt.Println("Write records failed!")
 		panic(err)
+	}
+}
+
+func setHttpProxy(proxy string) {
+	if proxy != "" {
+		proxyUrl, err := url.Parse(proxy)
+		if err != nil {
+			fmt.Println("Invalid proxy config")
+			fmt.Println(err)
+		} else {
+			httpClient = &http.Client{Transport: &http.Transport{Proxy: http.ProxyURL(proxyUrl)}}
+			fmt.Printf("Using proxy %s for U2 request!\n", proxy)
+		}
+	}
+}
+
+func closeBody(resp *http.Response) {
+	if resp.Body != nil {
+		resp.Body.Close()
 	}
 }
 

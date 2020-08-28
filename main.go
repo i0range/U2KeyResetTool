@@ -28,11 +28,13 @@ var (
 	transmissionClient *transmissionrpc.Client
 	apiKey             string
 	httpClient         = &http.Client{}
+	slientMode         = false
 )
 
 func initClient() {
 	commandConfig := parseFlag()
 	if commandConfig != nil {
+		slientMode = true
 		apiKey = commandConfig.ApiKey
 		makeClient(commandConfig.Host, commandConfig.Port, commandConfig.User, commandConfig.Pass)
 		checkVersion()
@@ -289,7 +291,7 @@ func doMutate(records map[string]int, data []U2Request, torrentMap map[int]*tran
 						}
 					} else {
 						fmt.Println("Skip torrent because of response error!")
-						fmt.Printf("%d %s", response.Error.Code, response.Error.Message)
+						fmt.Printf("%d %s\n", response.Error.Code, response.Error.Message)
 					}
 				}
 				saveRecords(records)
@@ -315,7 +317,8 @@ func doMutate(records map[string]int, data []U2Request, torrentMap map[int]*tran
 					body, _ := ioutil.ReadAll(resp.Body)
 					fmt.Println(string(body))
 				}
-				os.Exit(-1)
+				keepWindow(-1)
+
 			} else {
 				fmt.Println("Unrecognized error! Retry after 5 seconds!")
 				if resp.Body != nil {
@@ -412,7 +415,22 @@ func closeBody(resp *http.Response) {
 }
 
 func main() {
+	defer func() {
+		if err := recover(); err != nil {
+			keepWindow(-1)
+		} else {
+			keepWindow(0)
+		}
+	}()
 	initClient()
 	torrents := readTorrents()
 	mutateTorrentKey(torrents)
+}
+
+func keepWindow(code int) {
+	if !slientMode {
+		fmt.Println("Finished! Press enter key to exit!")
+		fmt.Scanln()
+	}
+	os.Exit(code)
 }

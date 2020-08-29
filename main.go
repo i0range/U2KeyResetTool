@@ -211,7 +211,7 @@ func readTorrents() []*transmissionrpc.Torrent {
 
 	var u2Torrents []*transmissionrpc.Torrent
 	for _, torrent := range torrents {
-		if strings.Contains(torrent.Trackers[0].Announce, "dmhy") {
+		if len(torrent.Trackers) > 0 && strings.Contains(torrent.Trackers[0].Announce, "dmhy") {
 			u2Torrents = append(u2Torrents, torrent)
 		}
 	}

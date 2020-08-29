@@ -24,6 +24,7 @@ type U2Response struct {
 }
 
 type Config struct {
+	Target string
 	Host   string
 	Port   uint16
 	Secure bool
@@ -33,7 +34,10 @@ type Config struct {
 	Proxy  string
 }
 
-func (c Config) Validate() bool {
+func (c *Config) Validate() bool {
+	if c.Target == "" {
+		c.Target = "transmission"
+	}
 	if c.Host == "" {
 		return false
 	}

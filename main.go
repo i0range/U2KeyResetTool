@@ -33,7 +33,7 @@ func initClient() {
 		silentMode = true
 		apiKey = commandConfig.ApiKey
 
-		u2Client, err := u2.NewClient("transmission", commandConfig)
+		u2Client, err := u2.NewClient(commandConfig)
 		if err != nil {
 			fmt.Println("Error while creating client!")
 			fmt.Println(err)
@@ -49,7 +49,7 @@ func initClient() {
 	config := readConfig()
 	if config != nil {
 		fmt.Println("Finding config:")
-		fmt.Printf("Host: %s\nPort: %d\nHTTPS: %t\nUser: %s\nPassword %s\nAPI Key: %s\nHTTP Proxy: %s\n", config.Host, config.Port, config.Secure, config.User, config.Pass, config.ApiKey, config.Proxy)
+		fmt.Printf("Target: %s\nHost: %s\nPort: %d\nHTTPS: %t\nUser: %s\nPassword: %s\nAPI Key: %s\nHTTP Proxy: %s\n", config.Target, config.Host, config.Port, config.Secure, config.User, config.Pass, config.ApiKey, config.Proxy)
 
 		fmt.Print("Use this config?(y/n)")
 		useConfig, _ := reader.ReadString('\n')
@@ -62,6 +62,12 @@ func initClient() {
 			return
 		}
 	}
+
+	fmt.Println("t for Transmission, q for qBittorrent, d for Deluge")
+	fmt.Print("Target program (t/q/d) [t]:")
+	target, _ := reader.ReadString('\n')
+	target = strings.TrimSpace(target)
+	target = parseTarget(target)
 
 	fmt.Print("Host [127.0.0.1]: ")
 	host, _ := reader.ReadString('\n')
@@ -112,6 +118,7 @@ func initClient() {
 	proxy = strings.TrimSpace(proxy)
 
 	u2Config := u2.Config{
+		Target: target,
 		Host:   host,
 		Port:   uint16(port),
 		Secure: https,
@@ -120,6 +127,8 @@ func initClient() {
 		ApiKey: apiKey,
 		Proxy:  proxy,
 	}
+
+	u2Config.Validate()
 
 	makeU2Client(&u2Config)
 
@@ -134,11 +143,11 @@ func initClient() {
 		}
 	}()
 	checkVersion()
-	saveConfig(host, uint16(port), https, user, pass, apiKey, proxy)
+	saveConfig(&u2Config)
 }
 
 func makeU2Client(config *u2.Config) {
-	u2Client, err := u2.NewClient("transmission", config)
+	u2Client, err := u2.NewClient(config)
 	if err != nil {
 		panic(err)
 	}
@@ -146,7 +155,7 @@ func makeU2Client(config *u2.Config) {
 }
 
 func parseFlag() *u2.Config {
-
+	target := flag.String("t", "t", "Target program, t for Transmission, q for qBittorrent, d for Deluge")
 	host := flag.String("h", "", "Host")
 	port := flag.Uint64("p", 0, "Port")
 	https := flag.Bool("s", false, "Use HTTPS")
@@ -158,6 +167,7 @@ func parseFlag() *u2.Config {
 	flag.Parse()
 
 	config := u2.Config{
+		Target: parseTarget(*target),
 		Host:   *host,
 		Port:   uint16(*port),
 		Secure: *https,
@@ -203,17 +213,8 @@ func readConfig() *u2.Config {
 	return nil
 }
 
-func saveConfig(host string, port uint16, https bool, user, pass, apiKey, proxy string) {
-	config := u2.Config{
-		Host:   host,
-		Port:   port,
-		Secure: https,
-		User:   user,
-		Pass:   pass,
-		ApiKey: apiKey,
-		Proxy:  proxy,
-	}
-	configBytes, err := json.Marshal(config)
+func saveConfig(config *u2.Config) {
+	configBytes, err := json.Marshal(*config)
 	if err != nil {
 		fmt.Println("Error while saving config! Json dump failed!")
 		panic(err)
@@ -332,6 +333,18 @@ func extractIp(host string) string {
 	host = strings.ReplaceAll(host, "https://", "")
 	host = strings.ReplaceAll(host, "/", "")
 	return host
+}
+
+func parseTarget(target string) string {
+	target = strings.ToLower(target)
+	if strings.HasPrefix(target, "t") {
+		return "transmission"
+	} else if strings.HasPrefix(target, "q") {
+		return "qBittorrent"
+	} else if strings.HasPrefix(target, "d") {
+		return "deluge"
+	}
+	return ""
 }
 
 func keepWindow(code int) {

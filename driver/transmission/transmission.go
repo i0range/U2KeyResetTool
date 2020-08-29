@@ -7,10 +7,10 @@ import (
 	"strings"
 )
 
-type TransmissionDriver struct {
+type Driver struct {
 }
 
-func (t TransmissionDriver) NewClient(config *u2.Config) (u2.DriverClient, error) {
+func (t Driver) NewClient(config *u2.Config) (u2.DriverClient, error) {
 	c := &DriverClient{
 		config: config,
 	}
@@ -25,19 +25,6 @@ type DriverClient struct {
 
 func (c *DriverClient) init() {
 	c.client = makeClient(c.config.Host, c.config.Port, c.config.Secure, c.config.User, c.config.Pass)
-}
-
-func makeClient(host string, port uint16, https bool, user string, pass string) *transmissionrpc.Client {
-	conf := transmissionrpc.AdvancedConfig{
-		HTTPS: https,
-		Port:  port,
-	}
-
-	client, err := transmissionrpc.New(host, user, pass, &conf)
-	if err != nil {
-		panic(err)
-	}
-	return client
 }
 
 func (c *DriverClient) Check() (bool, error) {
@@ -104,6 +91,19 @@ func (c *DriverClient) EditTorrentTracker(torrent *u2.Torrent, newTracker string
 	}
 }
 
+func makeClient(host string, port uint16, https bool, user string, pass string) *transmissionrpc.Client {
+	conf := transmissionrpc.AdvancedConfig{
+		HTTPS: https,
+		Port:  port,
+	}
+
+	client, err := transmissionrpc.New(host, user, pass, &conf)
+	if err != nil {
+		panic(err)
+	}
+	return client
+}
+
 func init() {
-	u2.Register("transmission", &TransmissionDriver{})
+	u2.Register("transmission", &Driver{})
 }

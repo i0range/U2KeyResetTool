@@ -11,20 +11,15 @@ type Driver struct {
 }
 
 func (t Driver) NewClient(config *u2.Config) (u2.DriverClient, error) {
-	c := &DriverClient{
+	return &DriverClient{
 		config: config,
-	}
-	c.init()
-	return c, nil
+		client: makeClient(config),
+	}, nil
 }
 
 type DriverClient struct {
 	config *u2.Config
 	client *transmissionrpc.Client
-}
-
-func (c *DriverClient) init() {
-	c.client = makeClient(c.config.Host, c.config.Port, c.config.Secure, c.config.User, c.config.Pass)
 }
 
 func (c *DriverClient) Check() (bool, error) {
@@ -91,13 +86,13 @@ func (c *DriverClient) EditTorrentTracker(torrent *u2.Torrent, newTracker string
 	}
 }
 
-func makeClient(host string, port uint16, https bool, user string, pass string) *transmissionrpc.Client {
+func makeClient(config *u2.Config) *transmissionrpc.Client {
 	conf := transmissionrpc.AdvancedConfig{
-		HTTPS: https,
-		Port:  port,
+		HTTPS: config.Secure,
+		Port:  config.Port,
 	}
 
-	client, err := transmissionrpc.New(host, user, pass, &conf)
+	client, err := transmissionrpc.New(config.Host, config.User, config.Pass, &conf)
 	if err != nil {
 		panic(err)
 	}

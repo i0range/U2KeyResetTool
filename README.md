@@ -21,7 +21,7 @@ Tr-U2@ITGR(https://gist.github.com/inertia42/f6120d118e47925095dbceb5e8e27272)
 
 ### Optional
 1. Install goreleaser
-2. Run `goreleaser --rm-dist --snapshot to build for all platform`
+2. Run `goreleaser --rm-dist --snapshot` to build for all platform
 
 ## Changelog
 https://github.com/i0range/U2KeyResetTool/releases

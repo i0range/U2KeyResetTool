@@ -67,6 +67,7 @@ func initClient() {
 	if host == "" {
 		host = "127.0.0.1"
 	}
+	host = extractIp(host)
 
 	fmt.Print("Transmission Port [9091]: ")
 	portString, _ := reader.ReadString('\n')
@@ -100,6 +101,12 @@ func initClient() {
 	setHttpProxy(proxy)
 	makeClient(host, uint16(port), user, pass)
 
+	defer func() {
+		if err := recover(); err != nil {
+			fmt.Printf("Please check your transmission server %s:%d\n", host, port)
+			panic(err)
+		}
+	}()
 	checkVersion()
 	saveConfig(host, uint16(port), user, pass, apiKey, proxy)
 }
@@ -399,6 +406,13 @@ func saveRecords(records map[string]int) {
 		fmt.Println("Write records failed!")
 		panic(err)
 	}
+}
+
+func extractIp(host string) string {
+	host = strings.ReplaceAll(host, "http://", "")
+	host = strings.ReplaceAll(host, "https://", "")
+	host = strings.ReplaceAll(host, "/", "")
+	return host
 }
 
 func setHttpProxy(proxy string) {

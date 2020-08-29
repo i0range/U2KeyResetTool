@@ -18,6 +18,13 @@ type TorrentInfo struct {
 type Driver struct {
 }
 
+func (q Driver) NewClient(config *u2.Config) (u2.DriverClient, error) {
+	return &DriverClient{
+		config: config,
+		client: makeClient(config),
+	}, nil
+}
+
 type DriverClient struct {
 	config *u2.Config
 	client *qBittorrent.Client
@@ -60,7 +67,7 @@ func (c *DriverClient) GetTorrentList(tracker string) *[]u2.Torrent {
 			}
 		}
 	}
-	fmt.Printf("Found %d torrent(s) to process!\n", len(u2Torrents))
+	fmt.Printf("Found %d torrent(s) from qBittorrent!\n", len(u2Torrents))
 
 	var finalTorrents []u2.Torrent
 	if len(u2Torrents) > 0 {
@@ -87,13 +94,6 @@ func (c *DriverClient) EditTorrentTracker(torrent *u2.Torrent, tracker string) (
 		fmt.Printf("Change success! %s %s\n", realTorrent.Hash, realTorrent.Name)
 		return true, nil
 	}
-}
-
-func (q Driver) NewClient(config *u2.Config) (u2.DriverClient, error) {
-	return &DriverClient{
-		config: config,
-		client: makeClient(config),
-	}, nil
 }
 
 func makeClient(config *u2.Config) *qBittorrent.Client {

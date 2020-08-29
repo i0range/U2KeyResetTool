@@ -44,7 +44,7 @@ func (c *DriverClient) GetTorrentList(tracker string) *[]u2.Torrent {
 			u2Torrents = append(u2Torrents, *torrent)
 		}
 	}
-	fmt.Printf("Found %d torrent(s) to process!\n", len(u2Torrents))
+	fmt.Printf("Found %d torrent(s) from Transmission!\n", len(u2Torrents))
 
 	var finalTorrents []u2.Torrent
 	if len(u2Torrents) > 0 {

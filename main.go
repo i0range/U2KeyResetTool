@@ -1,6 +1,7 @@
 package main
 
 import (
+	_ "U2KeyResetTool/driver/deluge"
 	_ "U2KeyResetTool/driver/qBittorrent"
 	_ "U2KeyResetTool/driver/transmission"
 	"U2KeyResetTool/u2"
@@ -241,7 +242,7 @@ func mutateTorrentKey(torrents *[]u2.Torrent) {
 		needProcessTorrents = append(needProcessTorrents, torrent)
 	}
 
-	fmt.Printf("Find %d torrent(s) to process!\n", len(needProcessTorrents))
+	fmt.Printf("Found %d torrent(s) to process!\n", len(needProcessTorrents))
 
 	for {
 		count := 0

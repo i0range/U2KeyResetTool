@@ -1,6 +1,7 @@
 package main
 
 import (
+	_ "U2KeyResetTool/driver/qBittorrent"
 	_ "U2KeyResetTool/driver/transmission"
 	"U2KeyResetTool/u2"
 	"bufio"
@@ -234,7 +235,7 @@ func mutateTorrentKey(torrents *[]u2.Torrent) {
 	records := readRecords()
 	var needProcessTorrents []u2.Torrent
 	for _, torrent := range *torrents {
-		if _, ok := records[*torrent.Hash]; ok {
+		if _, ok := records[torrent.Hash]; ok {
 			continue
 		}
 		needProcessTorrents = append(needProcessTorrents, torrent)
@@ -251,7 +252,7 @@ func mutateTorrentKey(torrents *[]u2.Torrent) {
 			requestData = append(requestData, u2.U2Request{
 				JsonRpc: "2.0",
 				Method:  "query",
-				Params:  []string{*torrent.Hash},
+				Params:  []string{torrent.Hash},
 				Id:      count,
 			})
 			torrentMap[count] = torrent
@@ -284,7 +285,7 @@ func doMutate(records map[string]int, data *[]u2.U2Request, torrentMap map[int]u
 	for _, response := range *secretKeyResponse {
 		if response.Id > 0 && response.Result != "" {
 			if updateTorrent(torrentMap[response.Id], response.Result) {
-				records[*(torrentMap[response.Id].Hash)] = 1
+				records[(torrentMap[response.Id].Hash)] = 1
 			}
 		} else {
 			fmt.Println("Skip torrent because of response error!")

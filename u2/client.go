@@ -128,7 +128,7 @@ func (c *Client) GetTorrentList(tracker string) *[]Torrent {
 func (c *Client) EditTorrentTracker(torrent *Torrent, newTracker string) bool {
 	ok, err := (*c.realClient).EditTorrentTracker(torrent, newTracker)
 	if err != nil {
-		fmt.Println("Error while edit torrent %s", *torrent.Hash)
+		fmt.Println("Error while edit torrent %s", torrent.Hash)
 	}
 	return ok
 }

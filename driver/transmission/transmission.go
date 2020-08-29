@@ -50,7 +50,7 @@ func (c *DriverClient) GetTorrentList(tracker string) *[]u2.Torrent {
 	if len(u2Torrents) > 0 {
 		for _, u2Torrent := range u2Torrents {
 			finalTorrents = append(finalTorrents, u2.Torrent{
-				Hash:    u2Torrent.HashString,
+				Hash:    *u2Torrent.HashString,
 				ExtInfo: u2Torrent,
 			})
 		}

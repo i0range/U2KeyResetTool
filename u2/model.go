@@ -1,7 +1,7 @@
 package u2
 
 type Torrent struct {
-	Hash    *string
+	Hash    string
 	ExtInfo interface{}
 }
 

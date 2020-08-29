@@ -145,12 +145,12 @@ func Register(name string, driver Driver) {
 	drivers[name] = driver
 }
 
-func NewClient(driverName string, config *Config) (*Client, error) {
+func NewClient(config *Config) (*Client, error) {
 	driversMu.RLock()
-	driverI, ok := drivers[driverName]
+	driverI, ok := drivers[config.Target]
 	driversMu.RUnlock()
 	if !ok {
-		return nil, fmt.Errorf("u2: unknown driver %q (forgotten import?)", driverName)
+		return nil, fmt.Errorf("u2: unknown driver %q (forgotten import?)", config.Target)
 	}
 
 	driverClient, err := driverI.NewClient(config)

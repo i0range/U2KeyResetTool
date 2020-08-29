@@ -1,9 +1,9 @@
 package deluge
 
 import (
-	"U2KeyResetTool/u2"
 	"fmt"
 	deluge "github.com/gdm85/go-libdeluge"
+	"github.com/i0range/U2KeyResetTool/u2"
 	"strings"
 	"time"
 )

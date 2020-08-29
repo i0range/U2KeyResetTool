@@ -1,8 +1,8 @@
 package qBittorrent
 
 import (
-	"U2KeyResetTool/u2"
 	"fmt"
+	"github.com/i0range/U2KeyResetTool/u2"
 	qBittorrent "github.com/i0range/go-qbittorrent"
 	log "github.com/sirupsen/logrus"
 	"strconv"

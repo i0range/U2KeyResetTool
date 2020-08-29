@@ -1,4 +1,4 @@
-module U2KeyResetTool
+module github.com/i0range/U2KeyResetTool
 
 go 1.14
 

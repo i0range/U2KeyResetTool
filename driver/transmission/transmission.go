@@ -1,9 +1,9 @@
 package transmission
 
 import (
-	"U2KeyResetTool/u2"
 	"fmt"
 	"github.com/hekmon/transmissionrpc"
+	"github.com/i0range/U2KeyResetTool/u2"
 	"strings"
 )
 

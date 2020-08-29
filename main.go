@@ -146,11 +146,12 @@ func makeU2Client(config *u2.Config) {
 }
 
 func parseFlag() *u2.Config {
-	host := flag.String("h", "", "Transmission host")
-	port := flag.Uint64("p", 0, "Transmission port")
+
+	host := flag.String("h", "", "Host")
+	port := flag.Uint64("p", 0, "Port")
 	https := flag.Bool("s", false, "Use HTTPS")
-	user := flag.String("u", "", "RPC User")
-	pass := flag.String("P", "", "RPC Pass")
+	user := flag.String("u", "", "User")
+	pass := flag.String("P", "", "Pass")
 	key := flag.String("k", "", "U2 API Key")
 	proxy := flag.String("proxy", "", "Http proxy address, i.e.: http://127.0.0.1:123")
 

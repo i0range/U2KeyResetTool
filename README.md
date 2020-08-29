@@ -17,11 +17,11 @@ Tr-U2@ITGR(https://gist.github.com/inertia42/f6120d118e47925095dbceb5e8e27272)
 ## How to build
 1. Install Golang (Only tested on 1.15)
 2. Clone code
-3. Run go build
+3. Run `go build`
 
 ### Optional
 1. Install goreleaser
-2. Run goreleaser --rm-dist --snapshot to build for all platform
+2. Run `goreleaser --rm-dist --snapshot to build for all platform`
 
 ## Changelog
 https://github.com/i0range/U2KeyResetTool/releases

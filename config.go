@@ -3,7 +3,9 @@ package main
 import (
 	"bufio"
 	"encoding/json"
+	"flag"
 	"fmt"
+	"github.com/i0range/U2KeyResetTool/tool"
 	"github.com/i0range/U2KeyResetTool/u2"
 	"io/ioutil"
 	"os"
@@ -18,7 +20,7 @@ const (
 func initConfig() *u2.Config {
 	commandConfig := parseFlag()
 	if commandConfig != nil {
-		TurnOnSilentMode()
+		tool.TurnOnSilentMode()
 		return commandConfig
 	}
 
@@ -42,7 +44,7 @@ func initConfig() *u2.Config {
 	fmt.Print("Target program (t/q/d) [t]:")
 	target, _ := reader.ReadString('\n')
 	target = strings.TrimSpace(target)
-	target = parseTarget(target)
+	target = tool.ParseTarget(target)
 
 	fmt.Print("Host [127.0.0.1]: ")
 	host, _ := reader.ReadString('\n')
@@ -50,7 +52,7 @@ func initConfig() *u2.Config {
 	if host == "" {
 		host = "127.0.0.1"
 	}
-	host = extractIp(host)
+	host = tool.ExtractIp(host)
 
 	fmt.Print("Port [9091]: ")
 	portString, _ := reader.ReadString('\n')
@@ -104,6 +106,35 @@ func initConfig() *u2.Config {
 	}
 
 	return &u2Config
+}
+
+func parseFlag() *u2.Config {
+	target := flag.String("t", "t", "Target program, t for Transmission, q for qBittorrent, d for Deluge")
+	host := flag.String("h", "", "Host")
+	port := flag.Uint64("p", 0, "Port")
+	https := flag.Bool("s", false, "Use HTTPS")
+	user := flag.String("u", "", "User")
+	pass := flag.String("P", "", "Pass")
+	key := flag.String("k", "", "U2 API Key")
+	proxy := flag.String("proxy", "", "Http proxy address, i.e.: http://127.0.0.1:123")
+
+	flag.Parse()
+
+	config := u2.Config{
+		Target: tool.ParseTarget(*target),
+		Host:   *host,
+		Port:   uint16(*port),
+		Secure: *https,
+		User:   *user,
+		Pass:   *pass,
+		ApiKey: *key,
+		Proxy:  *proxy,
+	}
+
+	if config.Validate() {
+		return &config
+	}
+	return nil
 }
 
 func readConfig() *u2.Config {

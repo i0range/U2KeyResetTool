@@ -1,4 +1,4 @@
-package main
+package tool
 
 import (
 	"fmt"
@@ -6,14 +6,14 @@ import (
 	"strings"
 )
 
-func extractIp(host string) string {
+func ExtractIp(host string) string {
 	host = strings.ReplaceAll(host, "http://", "")
 	host = strings.ReplaceAll(host, "https://", "")
 	host = strings.ReplaceAll(host, "/", "")
 	return host
 }
 
-func parseTarget(target string) string {
+func ParseTarget(target string) string {
 	target = strings.ToLower(target)
 	if strings.HasPrefix(target, "t") {
 		return "transmission"
@@ -25,7 +25,7 @@ func parseTarget(target string) string {
 	return ""
 }
 
-func keepWindow(code int) {
+func KeepWindow(code int) {
 	if !silentMode {
 		fmt.Println("Finished! Press enter key to exit!")
 		_, _ = fmt.Scanln()

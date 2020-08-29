@@ -63,7 +63,7 @@ func initClient() {
 		}
 	}
 
-	fmt.Print("Transmission Host [127.0.0.1]: ")
+	fmt.Print("Host [127.0.0.1]: ")
 	host, _ := reader.ReadString('\n')
 	host = strings.TrimSpace(host)
 	if host == "" {
@@ -71,7 +71,7 @@ func initClient() {
 	}
 	host = extractIp(host)
 
-	fmt.Print("Transmission Port [9091]: ")
+	fmt.Print("Port [9091]: ")
 	portString, _ := reader.ReadString('\n')
 	portString = strings.TrimSpace(portString)
 	if portString == "" {
@@ -95,11 +95,11 @@ func initClient() {
 		https = true
 	}
 
-	fmt.Print("RPC User []: ")
+	fmt.Print("User []: ")
 	user, _ := reader.ReadString('\n')
 	user = strings.TrimSpace(user)
 
-	fmt.Print("RPC Password []: ")
+	fmt.Print("Password []: ")
 	pass, _ := reader.ReadString('\n')
 	pass = strings.TrimSpace(pass)
 

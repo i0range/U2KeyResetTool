@@ -36,7 +36,7 @@ func initClient() {
 	if commandConfig != nil {
 		silentMode = true
 		apiKey = commandConfig.ApiKey
-		makeClient(commandConfig.Host, commandConfig.Port, commandConfig.User, commandConfig.Pass)
+		makeClient(commandConfig.Host, commandConfig.Port, commandConfig.Secure, commandConfig.User, commandConfig.Pass)
 		checkVersion()
 		return
 	}
@@ -46,7 +46,7 @@ func initClient() {
 	config := readConfig()
 	if config != nil {
 		fmt.Println("Finding config:")
-		fmt.Printf("Host: %s\nPort: %d\nUser: %s\nPassword %s\nAPI Key: %s\nHTTP Proxy: %s\n", config.Host, config.Port, config.User, config.Pass, config.ApiKey, config.Proxy)
+		fmt.Printf("Host: %s\nPort: %d\nHTTPS: %t\nUser: %s\nPassword %s\nAPI Key: %s\nHTTP Proxy: %s\n", config.Host, config.Port, config.Secure, config.User, config.Pass, config.ApiKey, config.Proxy)
 
 		fmt.Print("Use this config?(y/n)")
 		useConfig, _ := reader.ReadString('\n')
@@ -55,7 +55,7 @@ func initClient() {
 		if strings.ToLower(useConfig) == "y" || strings.ToLower(useConfig) == "yes" {
 			apiKey = config.ApiKey
 			setHttpProxy(config.Proxy)
-			makeClient(config.Host, config.Port, config.User, config.Pass)
+			makeClient(config.Host, config.Port, config.Secure, config.User, config.Pass)
 			checkVersion()
 			return
 		}
@@ -82,6 +82,17 @@ func initClient() {
 		panic(err)
 	}
 
+	fmt.Print("Use https (y/n) [n]: ")
+	useHttps, _ := reader.ReadString('\n')
+	useHttps = strings.TrimSpace(useHttps)
+	if useHttps == "" {
+		useHttps = "n"
+	}
+	https := false
+	if strings.ToLower(useHttps) == "y" || strings.ToLower(useHttps) == "yes" {
+		https = true
+	}
+
 	fmt.Print("RPC User []: ")
 	user, _ := reader.ReadString('\n')
 	user = strings.TrimSpace(user)
@@ -99,21 +110,26 @@ func initClient() {
 	proxy = strings.TrimSpace(proxy)
 
 	setHttpProxy(proxy)
-	makeClient(host, uint16(port), user, pass)
+	makeClient(host, uint16(port), https, user, pass)
 
 	defer func() {
 		if err := recover(); err != nil {
-			fmt.Printf("Please check your transmission server %s:%d\n", host, port)
+			if https {
+				fmt.Printf("Please check your transmission server https://%s:%d\n", host, port)
+			} else {
+				fmt.Printf("Please check your transmission server http://%s:%d\n", host, port)
+			}
 			panic(err)
 		}
 	}()
 	checkVersion()
-	saveConfig(host, uint16(port), user, pass, apiKey, proxy)
+	saveConfig(host, uint16(port), https, user, pass, apiKey, proxy)
 }
 
 func parseFlag() *Config {
 	host := flag.String("h", "", "Transmission host")
 	port := flag.Uint64("p", 0, "Transmission port")
+	https := flag.Bool("s", false, "Use HTTPS")
 	user := flag.String("u", "", "RPC User")
 	pass := flag.String("P", "", "RPC Pass")
 	key := flag.String("k", "", "U2 API Key")
@@ -126,6 +142,7 @@ func parseFlag() *Config {
 	config := Config{
 		Host:   *host,
 		Port:   uint16(*port),
+		Secure: *https,
 		User:   *user,
 		Pass:   *pass,
 		ApiKey: *key,
@@ -137,9 +154,10 @@ func parseFlag() *Config {
 	return nil
 }
 
-func makeClient(host string, port uint16, user string, pass string) {
+func makeClient(host string, port uint16, https bool, user string, pass string) {
 	conf := transmissionrpc.AdvancedConfig{
-		Port: port,
+		HTTPS: https,
+		Port:  port,
 	}
 
 	client, err := transmissionrpc.New(host, user, pass, &conf)
@@ -181,10 +199,11 @@ func readConfig() *Config {
 	return nil
 }
 
-func saveConfig(host string, port uint16, user, pass, apiKey, proxy string) {
+func saveConfig(host string, port uint16, https bool, user, pass, apiKey, proxy string) {
 	config := Config{
 		Host:   host,
 		Port:   port,
+		Secure: https,
 		User:   user,
 		Pass:   pass,
 		ApiKey: apiKey,
@@ -436,6 +455,14 @@ func closeBody(resp *http.Response) {
 	}
 }
 
+func keepWindow(code int) {
+	if !silentMode {
+		fmt.Println("Finished! Press enter key to exit!")
+		fmt.Scanln()
+	}
+	os.Exit(code)
+}
+
 func main() {
 	defer func() {
 		if err := recover(); err != nil {
@@ -447,12 +474,4 @@ func main() {
 	initClient()
 	torrents := readTorrents()
 	mutateTorrentKey(torrents)
-}
-
-func keepWindow(code int) {
-	if !silentMode {
-		fmt.Println("Finished! Press enter key to exit!")
-		fmt.Scanln()
-	}
-	os.Exit(code)
 }

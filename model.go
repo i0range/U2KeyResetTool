@@ -21,6 +21,7 @@ type U2Response struct {
 type Config struct {
 	Host   string
 	Port   uint16
+	Secure bool
 	User   string
 	Pass   string
 	ApiKey string

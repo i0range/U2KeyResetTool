@@ -1,4 +1,9 @@
-package main
+package u2
+
+type Torrent struct {
+	Hash    *string
+	ExtInfo interface{}
+}
 
 type U2Request struct {
 	JsonRpc string   `json:"jsonrpc"`
@@ -28,7 +33,7 @@ type Config struct {
 	Proxy  string
 }
 
-func (c Config) validate() bool {
+func (c Config) Validate() bool {
 	if c.Host == "" {
 		return false
 	}

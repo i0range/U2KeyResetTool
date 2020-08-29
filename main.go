@@ -1,15 +1,13 @@
 package main
 
 import (
+	_ "U2KeyResetTool/driver/transmission"
+	"U2KeyResetTool/u2"
 	"bufio"
-	"bytes"
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/hekmon/transmissionrpc"
 	"io/ioutil"
-	"net/http"
-	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -19,16 +17,14 @@ import (
 const (
 	configFileName        = "config.json"
 	processRecordFileName = "record.json"
-	endpoint              = "https://u2.dmhy.org/jsonrpc_torrentkey.php?apikey="
 	toTracker             = "https://daydream.dmhy.best/announce?secure="
 	batchSize             = 100
 )
 
 var (
-	transmissionClient *transmissionrpc.Client
-	apiKey             string
-	httpClient         = &http.Client{}
-	silentMode         = false
+	apiKey     string
+	silentMode = false
+	client     *u2.Client
 )
 
 func initClient() {
@@ -36,7 +32,14 @@ func initClient() {
 	if commandConfig != nil {
 		silentMode = true
 		apiKey = commandConfig.ApiKey
-		makeClient(commandConfig.Host, commandConfig.Port, commandConfig.Secure, commandConfig.User, commandConfig.Pass)
+
+		u2Client, err := u2.NewClient("transmission", commandConfig)
+		if err != nil {
+			fmt.Println("Error while creating client!")
+			fmt.Println(err)
+			panic(err)
+		}
+		client = u2Client
 		checkVersion()
 		return
 	}
@@ -54,8 +57,7 @@ func initClient() {
 
 		if strings.ToLower(useConfig) == "y" || strings.ToLower(useConfig) == "yes" {
 			apiKey = config.ApiKey
-			setHttpProxy(config.Proxy)
-			makeClient(config.Host, config.Port, config.Secure, config.User, config.Pass)
+			makeU2Client(config)
 			checkVersion()
 			return
 		}
@@ -109,8 +111,17 @@ func initClient() {
 	proxy, _ := reader.ReadString('\n')
 	proxy = strings.TrimSpace(proxy)
 
-	setHttpProxy(proxy)
-	makeClient(host, uint16(port), https, user, pass)
+	u2Config := u2.Config{
+		Host:   host,
+		Port:   uint16(port),
+		Secure: https,
+		User:   user,
+		Pass:   pass,
+		ApiKey: apiKey,
+		Proxy:  proxy,
+	}
+
+	makeU2Client(&u2Config)
 
 	defer func() {
 		if err := recover(); err != nil {
@@ -126,7 +137,15 @@ func initClient() {
 	saveConfig(host, uint16(port), https, user, pass, apiKey, proxy)
 }
 
-func parseFlag() *Config {
+func makeU2Client(config *u2.Config) {
+	u2Client, err := u2.NewClient("transmission", config)
+	if err != nil {
+		panic(err)
+	}
+	client = u2Client
+}
+
+func parseFlag() *u2.Config {
 	host := flag.String("h", "", "Transmission host")
 	port := flag.Uint64("p", 0, "Transmission port")
 	https := flag.Bool("s", false, "Use HTTPS")
@@ -137,38 +156,24 @@ func parseFlag() *Config {
 
 	flag.Parse()
 
-	setHttpProxy(*proxy)
-
-	config := Config{
+	config := u2.Config{
 		Host:   *host,
 		Port:   uint16(*port),
 		Secure: *https,
 		User:   *user,
 		Pass:   *pass,
 		ApiKey: *key,
+		Proxy:  *proxy,
 	}
 
-	if config.validate() {
+	if config.Validate() {
 		return &config
 	}
 	return nil
 }
 
-func makeClient(host string, port uint16, https bool, user string, pass string) {
-	conf := transmissionrpc.AdvancedConfig{
-		HTTPS: https,
-		Port:  port,
-	}
-
-	client, err := transmissionrpc.New(host, user, pass, &conf)
-	if err != nil {
-		panic(err)
-	}
-	transmissionClient = client
-}
-
 func checkVersion() {
-	ok, serverVersion, minimumVersion, err := transmissionClient.RPCVersion()
+	ok, err := client.Check()
 	if err != nil {
 		fmt.Println("Error while connecting to transmission server!")
 		panic(err)
@@ -177,22 +182,20 @@ func checkVersion() {
 		fmt.Println("Server too new!")
 		panic("Unsupported server!")
 	}
-	fmt.Println("Connected to transmission server!")
-	fmt.Printf("Server version %d|Server minium version %d\n", serverVersion, minimumVersion)
 }
 
-func readConfig() *Config {
+func readConfig() *u2.Config {
 	configBytes, err := ioutil.ReadFile(configFileName)
 	if err != nil {
 		return nil
 	}
-	var config Config
+	var config u2.Config
 	err = json.Unmarshal(configBytes, &config)
 	if err != nil {
 		fmt.Println("Error while decoding saved config!")
 		return nil
 	}
-	if config.validate() {
+	if config.Validate() {
 
 		return &config
 	}
@@ -200,7 +203,7 @@ func readConfig() *Config {
 }
 
 func saveConfig(host string, port uint16, https bool, user, pass, apiKey, proxy string) {
-	config := Config{
+	config := u2.Config{
 		Host:   host,
 		Port:   port,
 		Secure: https,
@@ -221,28 +224,15 @@ func saveConfig(host string, port uint16, https bool, user, pass, apiKey, proxy 
 	}
 }
 
-func readTorrents() []*transmissionrpc.Torrent {
-	torrents, err := transmissionClient.TorrentGetAll()
-	if err != nil {
-		fmt.Println("Error while getting torrents list!")
-		panic(err)
-	}
-
-	var u2Torrents []*transmissionrpc.Torrent
-	for _, torrent := range torrents {
-		if len(torrent.Trackers) > 0 && strings.Contains(torrent.Trackers[0].Announce, "dmhy") {
-			u2Torrents = append(u2Torrents, torrent)
-		}
-	}
-	fmt.Printf("Found %d torrent(s) to process!\n", len(u2Torrents))
-	return u2Torrents
+func readTorrents() *[]u2.Torrent {
+	return client.GetTorrentList("dmhy")
 }
 
-func mutateTorrentKey(torrents []*transmissionrpc.Torrent) {
+func mutateTorrentKey(torrents *[]u2.Torrent) {
 	records := readRecords()
-	var needProcessTorrents []*transmissionrpc.Torrent
-	for _, torrent := range torrents {
-		if _, ok := records[*torrent.HashString]; ok {
+	var needProcessTorrents []u2.Torrent
+	for _, torrent := range *torrents {
+		if _, ok := records[*torrent.Hash]; ok {
 			continue
 		}
 		needProcessTorrents = append(needProcessTorrents, torrent)
@@ -252,151 +242,58 @@ func mutateTorrentKey(torrents []*transmissionrpc.Torrent) {
 
 	for {
 		count := 0
-		var requestData []U2Request
-		torrentMap := make(map[int]*transmissionrpc.Torrent)
+		var requestData []u2.U2Request
+		torrentMap := make(map[int]*u2.Torrent)
 		for _, torrent := range needProcessTorrents {
 			count += 1
-			requestData = append(requestData, U2Request{
+			requestData = append(requestData, u2.U2Request{
 				JsonRpc: "2.0",
 				Method:  "query",
-				Params:  []string{*torrent.HashString},
+				Params:  []string{*torrent.Hash},
 				Id:      count,
 			})
-			torrentMap[count] = torrent
+			torrentMap[count] = &torrent
 
 			if count == batchSize {
-				doMutate(records, requestData, torrentMap)
+				doMutate(records, &requestData, torrentMap)
 				count = 0
-				requestData = []U2Request{}
-				torrentMap = make(map[int]*transmissionrpc.Torrent)
+				requestData = []u2.U2Request{}
+				torrentMap = make(map[int]*u2.Torrent)
 				fmt.Println("Wait 5 seconds for next batch.")
 				time.Sleep(5 * time.Second)
 			}
 		}
 
 		if count > 0 {
-			doMutate(records, requestData, torrentMap)
+			doMutate(records, &requestData, torrentMap)
 		}
 
 		break
 	}
 }
 
-func doMutate(records map[string]int, data []U2Request, torrentMap map[int]*transmissionrpc.Torrent) {
-	jsonRequestBytes, err := json.Marshal(data)
+func doMutate(records map[string]int, data *[]u2.U2Request, torrentMap map[int]*u2.Torrent) {
+	secretKeyResponse, err := client.GetNewKey(data)
 	if err != nil {
-		fmt.Println("Process u2 request failed!")
+		fmt.Println("Error while getting new key from u2!")
 		fmt.Println(err)
-		return
+		keepWindow(-1)
 	}
-
-	req, err := http.NewRequest("POST", endpoint+apiKey, bytes.NewBuffer(jsonRequestBytes))
-	if err != nil {
-		fmt.Println("Process u2 request failed!")
-		fmt.Println(err)
-		return
-	}
-	req.Header.Set("Content-Type", "application/json")
-
-	retryCount := 0
-	for {
-		resp, err := httpClient.Do(req)
-		if err != nil {
-			fmt.Println("Process u2 request failed!")
-			fmt.Println(err)
-			return
-		}
-
-		fmt.Println("response Status:", resp.Status)
-		if resp.StatusCode == 200 {
-			body, _ := ioutil.ReadAll(resp.Body)
-			closeBody(resp)
-
-			var secretKeyResponse []U2Response
-
-			err := json.Unmarshal(body, &secretKeyResponse)
-			if err != nil {
-				fmt.Println("Error while processing u2 response!")
-			} else {
-				for _, response := range secretKeyResponse {
-					if response.Id > 0 && response.Result != "" {
-						if updateTorrent(torrentMap[response.Id], response.Result) {
-							records[*(torrentMap[response.Id].HashString)] = 1
-						}
-					} else {
-						fmt.Println("Skip torrent because of response error!")
-						fmt.Printf("%d %s\n", response.Error.Code, response.Error.Message)
-					}
-				}
-				saveRecords(records)
+	for _, response := range *secretKeyResponse {
+		if response.Id > 0 && response.Result != "" {
+			if updateTorrent(torrentMap[response.Id], response.Result) {
+				records[*(torrentMap[response.Id].Hash)] = 1
 			}
-			break
 		} else {
-			if resp.StatusCode == 503 {
-				retryAfter := resp.Header.Get("Retry-After")
-				waitSecond := 5
-				if retryAfter != "" {
-					retryAfterInt, err := strconv.Atoi(retryAfter)
-					if err != nil {
-						fmt.Println("Convert retry after failed! Use default wait time!")
-					} else {
-						waitSecond += retryAfterInt
-					}
-				}
-				fmt.Printf("Rate limit! Waiting %d seconds!\n", waitSecond)
-				time.Sleep(time.Duration(waitSecond) * time.Second)
-			} else if resp.StatusCode == 403 {
-				fmt.Println("Wrong API key! Please note: API Key IS NOT passkey!")
-				if resp.Body != nil {
-					body, _ := ioutil.ReadAll(resp.Body)
-					fmt.Println(string(body))
-				}
-				keepWindow(-1)
-
-			} else {
-				fmt.Println("Unrecognized error! Retry after 5 seconds!")
-				if resp.Body != nil {
-					body, _ := ioutil.ReadAll(resp.Body)
-					fmt.Println(string(body))
-				}
-				time.Sleep(5 * time.Second)
-			}
-			retryCount++
-		}
-
-		closeBody(resp)
-
-		if retryCount > 5 {
-			fmt.Println("Too many retried! Please check your network!")
-			break
+			fmt.Println("Skip torrent because of response error!")
+			fmt.Printf("%d %s\n", response.Error.Code, response.Error.Message)
 		}
 	}
+	saveRecords(records)
 }
 
-func updateTorrent(torrent *transmissionrpc.Torrent, secretKey string) bool {
-	payload := transmissionrpc.TorrentSetPayload{
-		IDs:           []int64{*torrent.ID},
-		TrackerRemove: []int64{torrent.Trackers[0].ID},
-	}
-	err := transmissionClient.TorrentSet(&payload)
-	if err != nil {
-		fmt.Printf("Error while changing torrent %d %s %s\n", *torrent.ID, *torrent.HashString, *torrent.Name)
-		fmt.Println(err)
-		return false
-	}
-
-	payload.TrackerRemove = nil
-	payload.TrackerAdd = []string{toTracker + secretKey}
-	err = transmissionClient.TorrentSet(&payload)
-
-	if err != nil {
-		fmt.Printf("Error while changing torrent %d %s %s\n", *torrent.ID, *torrent.HashString, *torrent.Name)
-		fmt.Println(err)
-		return false
-	} else {
-		fmt.Printf("Change success! %d %s %s\n", *torrent.ID, *torrent.HashString, *torrent.Name)
-		return true
-	}
+func updateTorrent(torrent *u2.Torrent, secretKey string) bool {
+	return client.EditTorrentTracker(torrent, toTracker+secretKey)
 }
 
 func readRecords() map[string]int {
@@ -436,29 +333,10 @@ func extractIp(host string) string {
 	return host
 }
 
-func setHttpProxy(proxy string) {
-	if proxy != "" {
-		proxyUrl, err := url.Parse(proxy)
-		if err != nil {
-			fmt.Println("Invalid proxy config")
-			fmt.Println(err)
-		} else {
-			httpClient = &http.Client{Transport: &http.Transport{Proxy: http.ProxyURL(proxyUrl)}}
-			fmt.Printf("Using proxy %s for U2 request!\n", proxy)
-		}
-	}
-}
-
-func closeBody(resp *http.Response) {
-	if resp.Body != nil {
-		resp.Body.Close()
-	}
-}
-
 func keepWindow(code int) {
 	if !silentMode {
 		fmt.Println("Finished! Press enter key to exit!")
-		fmt.Scanln()
+		_, _ = fmt.Scanln()
 	}
 	os.Exit(code)
 }
@@ -466,6 +344,8 @@ func keepWindow(code int) {
 func main() {
 	defer func() {
 		if err := recover(); err != nil {
+			fmt.Println("Error while changing key!")
+			fmt.Println(err)
 			keepWindow(-1)
 		} else {
 			keepWindow(0)

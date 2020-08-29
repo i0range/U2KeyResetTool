@@ -28,13 +28,13 @@ var (
 	transmissionClient *transmissionrpc.Client
 	apiKey             string
 	httpClient         = &http.Client{}
-	slientMode         = false
+	silentMode         = false
 )
 
 func initClient() {
 	commandConfig := parseFlag()
 	if commandConfig != nil {
-		slientMode = true
+		silentMode = true
 		apiKey = commandConfig.ApiKey
 		makeClient(commandConfig.Host, commandConfig.Port, commandConfig.User, commandConfig.Pass)
 		checkVersion()
@@ -61,13 +61,19 @@ func initClient() {
 		}
 	}
 
-	fmt.Print("Transmission Host: ")
+	fmt.Print("Transmission Host [127.0.0.1]: ")
 	host, _ := reader.ReadString('\n')
 	host = strings.TrimSpace(host)
+	if host == "" {
+		host = "127.0.0.1"
+	}
 
-	fmt.Print("Transmission Port: ")
+	fmt.Print("Transmission Port [9091]: ")
 	portString, _ := reader.ReadString('\n')
 	portString = strings.TrimSpace(portString)
+	if portString == "" {
+		portString = "9091"
+	}
 
 	port, err := strconv.ParseUint(portString, 10, 16)
 	if err != nil {
@@ -75,19 +81,19 @@ func initClient() {
 		panic(err)
 	}
 
-	fmt.Print("RPC User: ")
+	fmt.Print("RPC User []: ")
 	user, _ := reader.ReadString('\n')
 	user = strings.TrimSpace(user)
 
-	fmt.Print("RPC Password: ")
+	fmt.Print("RPC Password []: ")
 	pass, _ := reader.ReadString('\n')
 	pass = strings.TrimSpace(pass)
 
-	fmt.Print("API Key: ")
+	fmt.Print("API Key (Get From https://u2.dmhy.org/privatetorrents.php) []: ")
 	key, _ := reader.ReadString('\n')
 	apiKey = strings.TrimSpace(key)
 
-	fmt.Print("HTTP Proxy: ")
+	fmt.Print("HTTP Proxy (May need to access U2 API, e.g. http://127.0.0.1:1080)[]: ")
 	proxy, _ := reader.ReadString('\n')
 	proxy = strings.TrimSpace(proxy)
 
@@ -428,7 +434,7 @@ func main() {
 }
 
 func keepWindow(code int) {
-	if !slientMode {
+	if !silentMode {
 		fmt.Println("Finished! Press enter key to exit!")
 		fmt.Scanln()
 	}

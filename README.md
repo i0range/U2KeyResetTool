@@ -20,6 +20,24 @@ De-U2@種崎敦美(https://github.com/XSky123/dmhy_change_securekey_deluge)
 2. Download the latest release at https://github.com/i0range/U2KeyResetTool/releases
 3. Run U2KeyResetTool
 
+## Command Line Arguments
+|Argument|Type  |Required|Usage          |
+| ------ | ---- | ------ | ------------- |
+|-t      |string|Required|Target program, t for Transmission, q for qBittorrent, d for Deluge (default "t")|
+|-h      |string|Required|Host IP Address|
+|-p      |uint  |Required|Port           |
+|-s      |bool  |Optional|Use HTTPS      |
+|-u      |string|Optional|Username       |
+|-P      |string|Optional|Password       |
+|-k      |string|Required|U2 API Key     |
+|-proxy  |string|Optional|Http proxy address, e.g.: http://127.0.0.1:123|
+
+For example, reset key for torrents on Transmission server on 192.168.1.2 port 9091 with user admin pass admin should use this command:
+
+```./U2KeyResetTool -t t -h 192.168.1.2 -p 9091 -u admin -P admin -k __YOUR_KEY__```
+
+If your server need https, just add `-s` flag
+
 ## How to build
 1. Install Golang (Only tested on 1.15)
 2. Clone code

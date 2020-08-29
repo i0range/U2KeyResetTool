@@ -56,10 +56,10 @@ func (c *DriverClient) GetTorrentList(tracker string) *[]u2.Torrent {
 		panic(err)
 	}
 
-	var u2Torrents []*transmissionrpc.Torrent
+	var u2Torrents []transmissionrpc.Torrent
 	for _, torrent := range torrents {
 		if len(torrent.Trackers) > 0 && strings.Contains(torrent.Trackers[0].Announce, tracker) {
-			u2Torrents = append(u2Torrents, torrent)
+			u2Torrents = append(u2Torrents, *torrent)
 		}
 	}
 	fmt.Printf("Found %d torrent(s) to process!\n", len(u2Torrents))

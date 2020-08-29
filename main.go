@@ -243,7 +243,7 @@ func mutateTorrentKey(torrents *[]u2.Torrent) {
 	for {
 		count := 0
 		var requestData []u2.U2Request
-		torrentMap := make(map[int]*u2.Torrent)
+		torrentMap := make(map[int]u2.Torrent)
 		for _, torrent := range needProcessTorrents {
 			count += 1
 			requestData = append(requestData, u2.U2Request{
@@ -252,13 +252,13 @@ func mutateTorrentKey(torrents *[]u2.Torrent) {
 				Params:  []string{*torrent.Hash},
 				Id:      count,
 			})
-			torrentMap[count] = &torrent
+			torrentMap[count] = torrent
 
 			if count == batchSize {
 				doMutate(records, &requestData, torrentMap)
 				count = 0
 				requestData = []u2.U2Request{}
-				torrentMap = make(map[int]*u2.Torrent)
+				torrentMap = make(map[int]u2.Torrent)
 				fmt.Println("Wait 5 seconds for next batch.")
 				time.Sleep(5 * time.Second)
 			}
@@ -272,7 +272,7 @@ func mutateTorrentKey(torrents *[]u2.Torrent) {
 	}
 }
 
-func doMutate(records map[string]int, data *[]u2.U2Request, torrentMap map[int]*u2.Torrent) {
+func doMutate(records map[string]int, data *[]u2.U2Request, torrentMap map[int]u2.Torrent) {
 	secretKeyResponse, err := client.GetNewKey(data)
 	if err != nil {
 		fmt.Println("Error while getting new key from u2!")
@@ -292,8 +292,8 @@ func doMutate(records map[string]int, data *[]u2.U2Request, torrentMap map[int]*
 	saveRecords(records)
 }
 
-func updateTorrent(torrent *u2.Torrent, secretKey string) bool {
-	return client.EditTorrentTracker(torrent, toTracker+secretKey)
+func updateTorrent(torrent u2.Torrent, secretKey string) bool {
+	return client.EditTorrentTracker(&torrent, toTracker+secretKey)
 }
 
 func readRecords() map[string]int {

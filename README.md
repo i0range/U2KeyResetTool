@@ -1,10 +1,11 @@
 # U2KeyResetTool
 
-A small tool written in Golang to replace Tracker address for Transmission v2.x and qBittorrent v4.x.
+A small tool written in Golang to replace Tracker address for Transmission v2.x, qBittorrent v4.x and Deluge v1.x.
 
 ## Origin Python Version：
 Tr-U2@ITGR(https://gist.github.com/inertia42/f6120d118e47925095dbceb5e8e27272)  
 qB-U2@杯杯杯杯具(https://gist.github.com/tongyifan/83220b417cffdd23528860ee0c518d15)
+De-U2@種崎敦美(https://github.com/XSky123/dmhy_change_securekey_deluge)
 
 ## Change
 1. Completely rewritten in Golang

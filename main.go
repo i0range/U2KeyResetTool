@@ -250,6 +250,8 @@ func mutateTorrentKey(torrents []*transmissionrpc.Torrent) {
 				count = 0
 				requestData = []U2Request{}
 				torrentMap = make(map[int]*transmissionrpc.Torrent)
+				fmt.Println("Wait 5 seconds for next batch.")
+				time.Sleep(5 * time.Second)
 			}
 		}
 

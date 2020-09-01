@@ -1,5 +1,7 @@
 package u2
 
+import "strings"
+
 type Torrent struct {
 	Hash    string
 	ExtInfo interface{}
@@ -47,5 +49,11 @@ func (c *Config) Validate() bool {
 	if c.ApiKey == "" {
 		return false
 	}
+	c.ApiKey = strings.ReplaceAll(c.ApiKey, "https://", "")
+	c.ApiKey = strings.ReplaceAll(c.ApiKey, "u2.dmhy.org", "")
+	c.ApiKey = strings.ReplaceAll(c.ApiKey, "/", "")
+	c.ApiKey = strings.ReplaceAll(c.ApiKey, "jsonrpc_torrentkey.php", "")
+	c.ApiKey = strings.ReplaceAll(c.ApiKey, "apikey=", "")
+	c.ApiKey = strings.ReplaceAll(c.ApiKey, "?", "")
 	return true
 }

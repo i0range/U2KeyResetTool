@@ -38,14 +38,14 @@ type Client struct {
 
 func (c *Client) GetNewKey(data *[]U2Request) (*[]U2Response, error) {
 	retryCount := 0
-	for {
-		jsonRequestBytes, err := json.Marshal(data)
-		if err != nil {
-			fmt.Println("Process u2 request failed!")
-			fmt.Println(err)
-			return nil, err
-		}
+	jsonRequestBytes, err := json.Marshal(data)
+	if err != nil {
+		fmt.Println("Process u2 request failed!")
+		fmt.Println(err)
+		return nil, err
+	}
 
+	for {
 		req, err := http.NewRequest("POST", endpoint+c.config.ApiKey, bytes.NewBuffer(jsonRequestBytes))
 		if err != nil {
 			fmt.Println("Process u2 request failed!")

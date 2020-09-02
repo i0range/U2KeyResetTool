@@ -37,23 +37,23 @@ type Client struct {
 }
 
 func (c *Client) GetNewKey(data *[]U2Request) (*[]U2Response, error) {
-	jsonRequestBytes, err := json.Marshal(data)
-	if err != nil {
-		fmt.Println("Process u2 request failed!")
-		fmt.Println(err)
-		return nil, err
-	}
-
-	req, err := http.NewRequest("POST", endpoint+c.config.ApiKey, bytes.NewBuffer(jsonRequestBytes))
-	if err != nil {
-		fmt.Println("Process u2 request failed!")
-		fmt.Println(err)
-		return nil, err
-	}
-	req.Header.Set("Content-Type", "application/json")
-
 	retryCount := 0
 	for {
+		jsonRequestBytes, err := json.Marshal(data)
+		if err != nil {
+			fmt.Println("Process u2 request failed!")
+			fmt.Println(err)
+			return nil, err
+		}
+
+		req, err := http.NewRequest("POST", endpoint+c.config.ApiKey, bytes.NewBuffer(jsonRequestBytes))
+		if err != nil {
+			fmt.Println("Process u2 request failed!")
+			fmt.Println(err)
+			return nil, err
+		}
+		req.Header.Set("Content-Type", "application/json")
+
 		resp, err := httpClient.Do(req)
 		if err != nil {
 			fmt.Println("Process u2 request failed!")
